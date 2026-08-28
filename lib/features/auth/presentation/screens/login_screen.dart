@@ -1,4 +1,4 @@
-import 'package:eda_restaurant/core/constants/app_constants.dart';
+import 'package:eda_restaurant/core/network/api_client.dart';
 import 'package:eda_restaurant/core/theme/app_colors.dart';
 import 'package:eda_restaurant/core/toast/toast.dart';
 import 'package:eda_restaurant/core/widgets/buttons/app_buttons.dart';
@@ -95,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: AppSpacing.lg),
                   PasswordField(
                     controller: _passwordController,
-                    hint: 'Demo password: 1234',
+                    hint: 'Password',
                     validator: (value) => value == null || value.isEmpty
                         ? 'Enter password'
                         : null,
@@ -136,37 +136,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _login,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  SecondaryButton(
-                    label: 'Use demo password 1234',
-                    icon: Icons.key_rounded,
-                    onPressed: () {
-                      _passwordController.text = '1234';
-                      _login();
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentSoft.withValues(alpha: 0.62),
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(
-                        color: AppColors.accent.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.verified_user_rounded,
-                          color: AppColors.accent,
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Text(
-                            'Demo login accepts password 1234, or any password with a phone number.',
-                          ),
-                        ),
-                      ],
+                  Text(
+                    'Partner accounts are created by admin only.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -182,35 +155,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_loading || !(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
     setState(() => _loading = true);
-    await Future<void>.delayed(550.ms);
 
     final phone = _phoneController.text.trim();
     final password = _passwordController.text.trim();
-    final valid =
-        phone.isNotEmpty && (password == '1234' || password.isNotEmpty);
 
-    if (!mounted) return;
-    if (!valid) {
+    try {
+      final response = await ref.read(apiClientProvider).post<Map<String, dynamic>>(
+        '/auth/partner/login',
+        data: {'phone': phone, 'password': password},
+      );
+      final data = response.data;
+      final token = data?['accessToken'] as String?;
+
+      if (!mounted) return;
+      if (token == null) {
+        setState(() => _loading = false);
+        ToastScope.of(context).error(
+          'Could not sign in',
+          subtitle: 'Check phone and password.',
+        );
+        return;
+      }
+
+      await persistAuth(
+        ref,
+        token: token,
+        phone: phone,
+        rememberMe: _rememberMe,
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ToastScope.of(context).success(
+        'Signed in',
+        subtitle: 'Partner dashboard is ready.',
+      );
+      context.go('/dashboard');
+    } catch (_) {
+      if (!mounted) return;
       setState(() => _loading = false);
       ToastScope.of(context).error(
         'Could not sign in',
-        subtitle: 'Use a phone number and demo password 1234.',
+        subtitle: 'Check API URL and credentials.',
       );
-      return;
     }
-
-    await persistAuth(
-      ref,
-      token: 'demo_restaurant_token_${DateTime.now().millisecondsSinceEpoch}',
-      phone: phone,
-      rememberMe: _rememberMe,
-    );
-    if (!mounted) return;
-    setState(() => _loading = false);
-    ToastScope.of(context).success(
-      'Signed in',
-      subtitle: '${AppConstants.appName} is ready for service.',
-    );
-    context.go('/dashboard');
   }
 }
