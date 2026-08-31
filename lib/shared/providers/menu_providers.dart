@@ -1,10 +1,10 @@
-import 'package:eda_restaurant/shared/data/demo_data.dart';
+import 'package:eda_restaurant/features/menu/data/menu_api_repository.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 final menuProvider = StateNotifierProvider<MenuNotifier, MenuState>((ref) {
-  return MenuNotifier();
+  return MenuNotifier(ref);
 });
 
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
@@ -44,19 +44,28 @@ class MenuState {
 }
 
 class MenuNotifier extends StateNotifier<MenuState> {
-  MenuNotifier()
-    : super(
-        const MenuState(
-          categories: DemoData.categories,
-          products: DemoData.products,
-        ),
-      );
+  MenuNotifier(this._ref)
+      : super(const MenuState(categories: [], products: [])) {
+    _load();
+  }
 
+  final Ref _ref;
   static const _uuid = Uuid();
 
-  void saveProduct(MenuProduct product) {
-    final id = product.id.isEmpty ? 'prod_${_uuid.v4()}' : product.id;
-    final normalized = product.copyWith(id: id);
+  Future<void> _load() async {
+    final repo = _ref.read(menuApiRepositoryProvider);
+    final categories = await repo.fetchCategories();
+    final products = await repo.fetchProducts();
+    state = MenuState(categories: categories, products: products);
+  }
+
+  Future<void> refresh() => _load();
+
+  Future<void> saveProduct(MenuProduct product) async {
+    final saved = await _ref.read(menuApiRepositoryProvider).saveProduct(product);
+    if (saved == null) return;
+    final id = saved.id.isEmpty ? 'prod_${_uuid.v4()}' : saved.id;
+    final normalized = saved.copyWith(id: id);
     final exists = state.products.any((item) => item.id == id);
     final products = exists
         ? [
@@ -76,15 +85,8 @@ class MenuNotifier extends StateNotifier<MenuState> {
   }
 
   void toggleAvailability(String productId, bool available) {
-    state = state.copyWith(
-      products: [
-        for (final product in state.products)
-          if (product.id == productId)
-            product.copyWith(available: available)
-          else
-            product,
-      ],
-    );
+    final product = state.products.firstWhere((p) => p.id == productId);
+    saveProduct(product.copyWith(available: available));
   }
 
   void saveCategory(MenuCategory category) {

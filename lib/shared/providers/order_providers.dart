@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:eda_restaurant/core/services/order_alert_service.dart';
-import 'package:eda_restaurant/features/orders/data/order_socket_service.dart';
 import 'package:eda_restaurant/features/orders/data/repositories/orders_repository.dart';
 import 'package:eda_restaurant/shared/data/demo_data.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
@@ -49,15 +48,27 @@ final dashboardStatsProvider = Provider<DashboardStats>((ref) {
 
 class OrdersNotifier extends StateNotifier<List<PartnerOrder>> {
   OrdersNotifier(this._ref) : super(const []) {
-    _subscription = _ref
-        .read(orderSocketServiceProvider)
-        .incomingOrders
-        .listen(_receiveIncomingOrder);
     unawaited(refresh());
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _poll());
   }
 
   final Ref _ref;
-  StreamSubscription<PartnerOrder>? _subscription;
+  Timer? _pollTimer;
+  final Set<String> _knownIncomingIds = {};
+
+  Future<void> _poll() async {
+    final previous = state;
+    await refresh();
+    for (final order in state) {
+      if (order.status != PartnerOrderStatus.incoming) continue;
+      if (_knownIncomingIds.add(order.id)) {
+        _receiveIncomingOrder(order);
+      }
+    }
+    for (final order in previous) {
+      _knownIncomingIds.add(order.id);
+    }
+  }
 
   Future<void> refresh() async {
     state = await _ref.read(ordersRepositoryProvider).fetchOrders();
@@ -94,16 +105,20 @@ class OrdersNotifier extends StateNotifier<List<PartnerOrder>> {
   }
 
   void simulateIncoming() {
-    final order = _ref.read(orderSocketServiceProvider).emitIncomingOrder();
-    _receiveIncomingOrder(order);
+    final incoming = state
+        .where((order) => order.status == PartnerOrderStatus.incoming)
+        .firstOrNull;
+    if (incoming != null) {
+      _receiveIncomingOrder(incoming);
+    }
   }
 
   void setSimulationEnabled(bool enabled) {
-    final socket = _ref.read(orderSocketServiceProvider);
     if (enabled) {
-      socket.start();
+      _pollTimer ??= Timer.periodic(const Duration(seconds: 15), (_) => _poll());
     } else {
-      socket.stop();
+      _pollTimer?.cancel();
+      _pollTimer = null;
     }
   }
 
@@ -147,7 +162,7 @@ class OrdersNotifier extends StateNotifier<List<PartnerOrder>> {
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 }

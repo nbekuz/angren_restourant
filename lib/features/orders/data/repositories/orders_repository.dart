@@ -1,8 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:eda_restaurant/core/network/api_client.dart';
-import 'package:eda_restaurant/shared/data/demo_data.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
@@ -18,10 +16,9 @@ class OrdersRepository {
     try {
       final response = await _apiClient.get<List<dynamic>>('/partner/orders');
       final rows = response.data ?? [];
-      if (rows.isEmpty && kDebugMode) return List<PartnerOrder>.of(DemoData.orders);
+      if (rows.isEmpty) return [];
       return rows.map((raw) => _mapOrder(raw as Map<String, dynamic>)).toList();
     } on DioException {
-      if (kDebugMode) return List<PartnerOrder>.of(DemoData.orders);
       return [];
     }
   }
@@ -45,9 +42,13 @@ class OrdersRepository {
         data: {'status': apiStatus},
       );
     } on DioException {
-      if (!kDebugMode) throw Exception('Failed to update order');
+      throw Exception('Failed to update order');
     }
-    return _demoOrder(orderId).copyWith(status: status);
+    return _mapOrder({
+      'id': orderId,
+      'orderNumber': orderId,
+      'status': apiStatus,
+    }).copyWith(status: status);
   }
 
   PartnerOrder _mapOrder(Map<String, dynamic> json) {
@@ -100,12 +101,5 @@ class OrdersRepository {
       case PartnerOrderStatus.cancelled:
         return 'cancelled';
     }
-  }
-
-  PartnerOrder _demoOrder(String orderId) {
-    return DemoData.orders.firstWhere(
-      (order) => order.id == orderId,
-      orElse: () => DemoData.orders.first,
-    );
   }
 }

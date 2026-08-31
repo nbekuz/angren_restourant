@@ -20,3 +20,14 @@ abstract final class AppConstants {
   static const String hiveBoxCache = 'eda_restaurant_cache';
   static const String hiveBoxSession = 'eda_restaurant_session';
 }
+
+abstract final class StorageKeys {
+  static const accessToken = 'access_token';
+  static const userPhone = 'user_phone';
+  static const locale = 'locale';
+  static const themeMode = 'theme_mode';
+  static const rememberMe = 'remember_me';
+  static const onboardingComplete = 'onboarding_complete';
+  static const languageSelected = 'language_selected';
+  static const restaurantStatus = 'restaurant_status';
+}

@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eda_restaurant/core/theme/app_colors.dart';
 import 'package:eda_restaurant/core/widgets/cards/app_cards.dart';
-import 'package:eda_restaurant/shared/data/demo_data.dart';
+import 'package:eda_restaurant/features/menu/data/menu_api_repository.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
 import 'package:eda_restaurant/shared/providers/app_providers.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +15,18 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(restaurantStatusProvider);
-    final profile = DemoData.profile.copyWith(status: status);
+    final merchantAsync = ref.watch(merchantProfileProvider);
+    final merchant = merchantAsync.value;
+    final profile = RestaurantProfile(
+      id: merchant?.id ?? 'merchant',
+      name: merchant?.name ?? 'Partner',
+      phone: merchant?.phone ?? '',
+      address: merchant?.address ?? '',
+      logoUrl: merchant?.logoUrl ?? '',
+      coverUrl: merchant?.coverUrl ?? '',
+      status: status,
+      type: merchant?.type ?? 'restaurant',
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: ListView(
