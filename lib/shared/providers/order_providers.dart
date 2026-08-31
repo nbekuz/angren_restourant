@@ -48,11 +48,12 @@ final dashboardStatsProvider = Provider<DashboardStats>((ref) {
 });
 
 class OrdersNotifier extends StateNotifier<List<PartnerOrder>> {
-  OrdersNotifier(this._ref) : super(List<PartnerOrder>.of(DemoData.orders)) {
+  OrdersNotifier(this._ref) : super(const []) {
     _subscription = _ref
         .read(orderSocketServiceProvider)
         .incomingOrders
         .listen(_receiveIncomingOrder);
+    unawaited(refresh());
   }
 
   final Ref _ref;

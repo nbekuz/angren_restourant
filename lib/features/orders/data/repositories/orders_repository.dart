@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:eda_restaurant/core/network/api_client.dart';
 import 'package:eda_restaurant/shared/data/demo_data.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
@@ -14,43 +15,90 @@ class OrdersRepository {
   final ApiClient _apiClient;
 
   Future<List<PartnerOrder>> fetchOrders() async {
-    await _simulateLatency();
-    return List<PartnerOrder>.of(DemoData.orders);
+    try {
+      final response = await _apiClient.get<List<dynamic>>('/partner/orders');
+      final rows = response.data ?? [];
+      if (rows.isEmpty && kDebugMode) return List<PartnerOrder>.of(DemoData.orders);
+      return rows.map((raw) => _mapOrder(raw as Map<String, dynamic>)).toList();
+    } on DioException {
+      if (kDebugMode) return List<PartnerOrder>.of(DemoData.orders);
+      return [];
+    }
   }
 
   Future<PartnerOrder> accept(String orderId) async {
-    await _postStatus(orderId, PartnerOrderStatus.preparing);
-    return _demoOrder(
-      orderId,
-    ).copyWith(status: PartnerOrderStatus.preparing, allowReject: false);
+    return updateStatus(orderId, PartnerOrderStatus.preparing);
   }
 
   Future<PartnerOrder> reject(String orderId) async {
-    await _postStatus(orderId, PartnerOrderStatus.cancelled);
-    return _demoOrder(orderId).copyWith(
-      status: PartnerOrderStatus.cancelled,
-      allowReject: false,
-      etaMinutes: 0,
-    );
+    return updateStatus(orderId, PartnerOrderStatus.cancelled);
   }
 
   Future<PartnerOrder> updateStatus(
     String orderId,
     PartnerOrderStatus status,
   ) async {
-    await _postStatus(orderId, status);
+    final apiStatus = _toApiStatus(status);
+    try {
+      await _apiClient.patch<Map<String, dynamic>>(
+        '/partner/orders/$orderId/status',
+        data: {'status': apiStatus},
+      );
+    } on DioException {
+      if (!kDebugMode) throw Exception('Failed to update order');
+    }
     return _demoOrder(orderId).copyWith(status: status);
   }
 
-  Future<void> _postStatus(String orderId, PartnerOrderStatus status) async {
-    try {
-      await _apiClient.post<Map<String, dynamic>>(
-        '/partner/orders/$orderId/status',
-        data: {'status': status.name},
-      );
-    } on DioException {
-      // The production client is wired through Dio; demo mode remains offline.
-      await _simulateLatency();
+  PartnerOrder _mapOrder(Map<String, dynamic> json) {
+    final status = _fromApiStatus(json['status'] as String?);
+    return PartnerOrder(
+      id: json['id'] as String,
+      number: json['orderNumber'] as String? ?? json['id'] as String,
+      customerName: 'Customer',
+      customerPhone: '',
+      address: '',
+      items: const [],
+      total: double.tryParse('${json['total']}') ?? 0,
+      status: status,
+      paymentMethod: PaymentMethod.cash,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      etaMinutes: json['etaMinutes'] as int? ?? 20,
+      allowReject: status == PartnerOrderStatus.incoming,
+    );
+  }
+
+  PartnerOrderStatus _fromApiStatus(String? status) {
+    switch (status) {
+      case 'created':
+        return PartnerOrderStatus.incoming;
+      case 'accepted':
+      case 'preparing':
+        return PartnerOrderStatus.preparing;
+      case 'ready':
+        return PartnerOrderStatus.ready;
+      case 'delivered':
+        return PartnerOrderStatus.completed;
+      case 'cancelled':
+        return PartnerOrderStatus.cancelled;
+      default:
+        return PartnerOrderStatus.incoming;
+    }
+  }
+
+  String _toApiStatus(PartnerOrderStatus status) {
+    switch (status) {
+      case PartnerOrderStatus.incoming:
+        return 'accepted';
+      case PartnerOrderStatus.preparing:
+        return 'preparing';
+      case PartnerOrderStatus.ready:
+        return 'ready';
+      case PartnerOrderStatus.completed:
+        return 'delivered';
+      case PartnerOrderStatus.cancelled:
+        return 'cancelled';
     }
   }
 
@@ -59,9 +107,5 @@ class OrdersRepository {
       (order) => order.id == orderId,
       orElse: () => DemoData.orders.first,
     );
-  }
-
-  Future<void> _simulateLatency() {
-    return Future<void>.delayed(const Duration(milliseconds: 220));
   }
 }
