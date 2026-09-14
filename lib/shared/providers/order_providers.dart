@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:eda_restaurant/core/services/order_alert_service.dart';
 import 'package:eda_restaurant/features/orders/data/repositories/orders_repository.dart';
-import 'package:eda_restaurant/shared/data/demo_data.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,15 +33,13 @@ final dashboardStatsProvider = Provider<DashboardStats>((ref) {
       .where((order) => order.status == PartnerOrderStatus.preparing)
       .length;
 
-  return DemoData.stats.copyWith(
+  return DashboardStats(
     todayOrders: orders.length,
-    todayRevenue: revenue == 0 ? DemoData.stats.todayRevenue : revenue,
+    todayRevenue: revenue,
     pending: incoming,
     preparing: preparing,
     completed: completed.length,
-    avgCheck: completed.isEmpty
-        ? DemoData.stats.avgCheck
-        : revenue / completed.length,
+    avgCheck: completed.isEmpty ? 0 : revenue / completed.length,
   );
 });
 
@@ -102,24 +99,6 @@ class OrdersNotifier extends StateNotifier<List<PartnerOrder>> {
     );
     _upsert(updated);
     await _ref.read(ordersRepositoryProvider).updateStatus(orderId, status);
-  }
-
-  void simulateIncoming() {
-    final incoming = state
-        .where((order) => order.status == PartnerOrderStatus.incoming)
-        .firstOrNull;
-    if (incoming != null) {
-      _receiveIncomingOrder(incoming);
-    }
-  }
-
-  void setSimulationEnabled(bool enabled) {
-    if (enabled) {
-      _pollTimer ??= Timer.periodic(const Duration(seconds: 15), (_) => _poll());
-    } else {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    }
   }
 
   void dismissIncoming() {

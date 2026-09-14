@@ -2,7 +2,7 @@ import 'package:eda_restaurant/core/theme/app_colors.dart';
 import 'package:eda_restaurant/core/toast/toast.dart';
 import 'package:eda_restaurant/core/widgets/cards/app_cards.dart';
 import 'package:eda_restaurant/core/widgets/inputs/app_inputs.dart';
-import 'package:eda_restaurant/shared/data/demo_data.dart';
+import 'package:eda_restaurant/features/menu/data/menu_api_repository.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
 import 'package:eda_restaurant/shared/providers/app_providers.dart';
 import 'package:eda_restaurant/shared/providers/order_providers.dart';
@@ -50,6 +50,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     final orders = ref.watch(ordersProvider);
     final status = ref.watch(restaurantStatusProvider);
     final stats = ref.watch(dashboardStatsProvider);
+    final merchantName =
+        ref.watch(merchantProfileProvider).value?.name ?? 'Partner';
 
     return Scaffold(
       appBar: AppBar(
@@ -59,14 +61,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
             tooltip: 'Notifications',
             onPressed: () => context.push('/notifications'),
             icon: const Icon(Icons.notifications_rounded),
-          ),
-          IconButton(
-            tooltip: 'Filter',
-            onPressed: () => ToastScope.of(context).info(
-              'Smart filter',
-              subtitle: 'Search and status tabs are active in demo mode.',
-            ),
-            icon: const Icon(Icons.tune_rounded),
           ),
         ],
       ),
@@ -87,6 +81,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                       child: Column(
                         children: [
                           _DashboardHeader(
+                            merchantName: merchantName,
                             status: status,
                             stats: stats,
                             onStatusChanged: (open) => persistRestaurantStatus(
@@ -148,17 +143,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          ref.read(ordersProvider.notifier).simulateIncoming();
-          ToastScope.of(context).info(
-            'Incoming order',
-            subtitle: 'Fullscreen accept alert is now active.',
-          );
-        },
-        icon: const Icon(Icons.bolt_rounded),
-        label: const Text('Simulate'),
-      ),
     );
   }
 
@@ -198,6 +182,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
 class _DashboardHeader extends StatelessWidget {
   const _DashboardHeader({
+    required this.merchantName,
     required this.status,
     required this.stats,
     required this.onStatusChanged,
@@ -205,6 +190,7 @@ class _DashboardHeader extends StatelessWidget {
     required this.onSchedule,
   });
 
+  final String merchantName;
   final RestaurantStatus status;
   final DashboardStats stats;
   final ValueChanged<bool> onStatusChanged;
@@ -231,7 +217,7 @@ class _DashboardHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DemoData.profile.name,
+                      merchantName,
                       style: Theme.of(
                         context,
                       ).textTheme.headlineSmall?.copyWith(color: Colors.white),
