@@ -2,11 +2,11 @@ abstract final class AppConstants {
   static const String appName = 'Angren Deliver Partner';
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000/v1',
+    defaultValue: 'https://api.reyt.uz/v1',
   );
   static const String socketUrl = String.fromEnvironment(
     'SOCKET_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'https://api.reyt.uz',
   );
 
   static const Duration connectTimeout = Duration(seconds: 15);
