@@ -1,3 +1,4 @@
+import 'package:eda_restaurant/core/i18n/localized_fields.dart';
 import 'package:equatable/equatable.dart';
 
 enum RestaurantStatus { open, closed, temporaryClosed }
@@ -122,31 +123,54 @@ class MenuCategory extends Equatable {
   const MenuCategory({
     required this.id,
     required this.name,
+    this.nameRu,
+    this.nameEn,
+    this.merchantId,
     required this.sortOrder,
     required this.productCount,
   });
 
   final String id;
   final String name;
+  final String? nameRu;
+  final String? nameEn;
+  final String? merchantId;
   final int sortOrder;
   final int productCount;
+
+  bool get isOwned => merchantId != null && merchantId!.isNotEmpty;
+
+  String label(String locale) => localizedField(
+        locale,
+        uz: name,
+        ru: nameRu,
+        en: nameEn,
+        fallback: name,
+      );
 
   MenuCategory copyWith({
     String? id,
     String? name,
+    String? nameRu,
+    String? nameEn,
+    String? merchantId,
     int? sortOrder,
     int? productCount,
   }) {
     return MenuCategory(
       id: id ?? this.id,
       name: name ?? this.name,
+      nameRu: nameRu ?? this.nameRu,
+      nameEn: nameEn ?? this.nameEn,
+      merchantId: merchantId ?? this.merchantId,
       sortOrder: sortOrder ?? this.sortOrder,
       productCount: productCount ?? this.productCount,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, sortOrder, productCount];
+  List<Object?> get props =>
+      [id, name, nameRu, nameEn, merchantId, sortOrder, productCount];
 }
 
 class MenuProduct extends Equatable {
@@ -154,7 +178,11 @@ class MenuProduct extends Equatable {
     required this.id,
     required this.categoryId,
     required this.name,
+    this.nameRu,
+    this.nameEn,
     required this.description,
+    this.descriptionRu,
+    this.descriptionEn,
     required this.price,
     required this.imageUrl,
     required this.weightGrams,
@@ -162,12 +190,19 @@ class MenuProduct extends Equatable {
     required this.stock,
     required this.discountPercent,
     required this.ingredients,
+    this.ingredientsRu = const [],
+    this.ingredientsEn = const [],
+    this.ingredientIds = const [],
   });
 
   final String id;
   final String categoryId;
   final String name;
+  final String? nameRu;
+  final String? nameEn;
   final String description;
+  final String? descriptionRu;
+  final String? descriptionEn;
   final double price;
   final String imageUrl;
   final int weightGrams;
@@ -175,12 +210,34 @@ class MenuProduct extends Equatable {
   final int stock;
   final int discountPercent;
   final List<String> ingredients;
+  final List<String> ingredientsRu;
+  final List<String> ingredientsEn;
+  final List<String> ingredientIds;
+
+  String displayName(String locale) => localizedField(
+        locale,
+        uz: name,
+        ru: nameRu,
+        en: nameEn,
+        fallback: name,
+      );
+
+  String displayDescription(String locale) => localizedField(
+        locale,
+        uz: description,
+        ru: descriptionRu,
+        en: descriptionEn,
+      );
 
   MenuProduct copyWith({
     String? id,
     String? categoryId,
     String? name,
+    String? nameRu,
+    String? nameEn,
     String? description,
+    String? descriptionRu,
+    String? descriptionEn,
     double? price,
     String? imageUrl,
     int? weightGrams,
@@ -188,12 +245,19 @@ class MenuProduct extends Equatable {
     int? stock,
     int? discountPercent,
     List<String>? ingredients,
+    List<String>? ingredientsRu,
+    List<String>? ingredientsEn,
+    List<String>? ingredientIds,
   }) {
     return MenuProduct(
       id: id ?? this.id,
       categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
+      nameRu: nameRu ?? this.nameRu,
+      nameEn: nameEn ?? this.nameEn,
       description: description ?? this.description,
+      descriptionRu: descriptionRu ?? this.descriptionRu,
+      descriptionEn: descriptionEn ?? this.descriptionEn,
       price: price ?? this.price,
       imageUrl: imageUrl ?? this.imageUrl,
       weightGrams: weightGrams ?? this.weightGrams,
@@ -201,6 +265,9 @@ class MenuProduct extends Equatable {
       stock: stock ?? this.stock,
       discountPercent: discountPercent ?? this.discountPercent,
       ingredients: ingredients ?? this.ingredients,
+      ingredientsRu: ingredientsRu ?? this.ingredientsRu,
+      ingredientsEn: ingredientsEn ?? this.ingredientsEn,
+      ingredientIds: ingredientIds ?? this.ingredientIds,
     );
   }
 
@@ -209,7 +276,11 @@ class MenuProduct extends Equatable {
     id,
     categoryId,
     name,
+    nameRu,
+    nameEn,
     description,
+    descriptionRu,
+    descriptionEn,
     price,
     imageUrl,
     weightGrams,
@@ -217,6 +288,9 @@ class MenuProduct extends Equatable {
     stock,
     discountPercent,
     ingredients,
+    ingredientsRu,
+    ingredientsEn,
+    ingredientIds,
   ];
 }
 

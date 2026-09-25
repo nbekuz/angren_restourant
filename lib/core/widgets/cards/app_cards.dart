@@ -2,7 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eda_restaurant/core/theme/app_colors.dart';
 import 'package:eda_restaurant/core/widgets/buttons/app_buttons.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
+import 'package:eda_restaurant/shared/providers/app_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 String formatMoney(double amount) => '${amount.toStringAsFixed(0)} сум';
 
@@ -295,27 +297,41 @@ class CategoryCard extends StatelessWidget {
       child: _PremiumCard(
         child: Row(
           children: [
-            const _IconBox(icon: Icons.restaurant_menu_rounded),
+            _IconBox(
+              icon: category.isOwned
+                  ? Icons.folder_rounded
+                  : Icons.folder_shared_rounded,
+            ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    category.name,
+                    category.label(
+                      Localizations.localeOf(context).languageCode,
+                    ),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '${category.productCount} products',
+                    [
+                      if (category.nameRu?.isNotEmpty == true)
+                        'RU: ${category.nameRu}',
+                      if (category.nameEn?.isNotEmpty == true)
+                        'EN: ${category.nameEn}',
+                      '${category.productCount} mahsulot',
+                    ].join(' · '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
             StatusBadge(
-              label: '#${category.sortOrder}',
-              color: AppColors.accent,
+              label: category.isOwned ? 'Sizniki' : 'Umumiy',
+              color: category.isOwned ? AppColors.success : AppColors.accent,
             ),
           ],
         ),
@@ -324,14 +340,15 @@ class CategoryCard extends StatelessWidget {
   }
 }
 
-class ProductCard extends StatelessWidget {
+class ProductCard extends ConsumerWidget {
   const ProductCard({super.key, required this.product, this.onTap});
 
   final MenuProduct product;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider).languageCode;
     return AnimatedButton(
       onPressed: onTap ?? () {},
       child: _PremiumCard(
@@ -356,7 +373,7 @@ class ProductCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          product.name,
+                          product.displayName(locale),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
@@ -370,25 +387,17 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    product.description,
+                    product.displayDescription(locale),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Text(
-                        formatMoney(product.price),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(color: AppColors.primary),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        '${product.weightGrams} g',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  Text(
+                    formatMoney(product.price),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ],
               ),

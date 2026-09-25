@@ -28,7 +28,16 @@ class ProfileScreen extends ConsumerWidget {
       type: merchant?.type ?? 'restaurant',
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profil'),
+        actions: [
+          IconButton(
+            tooltip: 'Tahrirlash',
+            onPressed: () => context.push('/profile/edit'),
+            icon: const Icon(Icons.edit_rounded),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.page,
@@ -40,28 +49,54 @@ class ProfileScreen extends ConsumerWidget {
           _ProfileHero(profile: profile),
           const SizedBox(height: AppSpacing.lg),
           MenuTile(
-            title: 'Documents',
-            subtitle: 'Licenses, tax details, food safety',
-            icon: Icons.description_rounded,
-            onTap: () => context.push('/documents'),
+            title: 'Profilni tahrirlash',
+            subtitle: 'Nom, tavsif, logo va banner',
+            icon: Icons.storefront_rounded,
+            onTap: () => context.push('/profile/edit'),
           ),
           MenuTile(
-            title: 'Notifications',
-            subtitle: 'Orders, promotions, system updates',
-            icon: Icons.notifications_rounded,
-            onTap: () => context.push('/notifications'),
+            title: 'Ish jadvali',
+            subtitle: merchant?.workingHoursText ?? 'Kunlik ochilish vaqtlari',
+            icon: Icons.schedule_rounded,
+            onTap: () => context.go('/schedule'),
           ),
           MenuTile(
-            title: 'Settings',
-            subtitle: 'Language, theme, sound, printer',
+            title: 'Menyu',
+            subtitle: 'Mahsulot qo‘shish va o‘chirish',
+            icon: Icons.restaurant_menu_rounded,
+            onTap: () => context.go('/menu'),
+          ),
+          MenuTile(
+            title: 'Kategoriyalar',
+            subtitle: profile.type == 'pharmacy'
+                ? 'Apteka bo‘limlari (masalan: dori, gigiyena)'
+                : profile.type == 'market'
+                    ? 'Do‘kon bo‘limlari (masalan: ichimlik, non)'
+                    : 'Menyu bo‘limlari (masalan: ichimliklar, salat)',
+            icon: Icons.category_rounded,
+            onTap: () => context.push('/menu/category'),
+          ),
+          if (profile.type == 'restaurant')
+            MenuTile(
+              title: 'Ingredientlar',
+              subtitle: 'Mahsulot tarkibi (faqat restoran)',
+              icon: Icons.spa_rounded,
+              onTap: () => context.push('/menu/ingredients'),
+            ),
+          MenuTile(
+            title: 'Sozlamalar',
+            subtitle: 'Til, mavzu, ovoz',
             icon: Icons.settings_rounded,
             onTap: () => context.push('/settings'),
           ),
           MenuTile(
-            title: 'Support',
-            subtitle: '+998 71 200 77 77',
-            icon: Icons.support_agent_rounded,
-            onTap: () {},
+            title: 'Chiqish',
+            subtitle: 'Akkountdan chiqish',
+            icon: Icons.logout_rounded,
+            onTap: () async {
+              await clearAuth(ref);
+              if (context.mounted) context.go('/login');
+            },
           ),
         ].animate(interval: 45.ms).fadeIn().slideY(begin: 0.03),
       ),

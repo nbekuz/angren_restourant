@@ -6,6 +6,7 @@ import 'package:eda_restaurant/features/menu/data/menu_api_repository.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
 import 'package:eda_restaurant/shared/providers/app_providers.dart';
 import 'package:eda_restaurant/shared/providers/order_providers.dart';
+import 'package:eda_restaurant/shared/providers/schedule_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,12 +85,17 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                             merchantName: merchantName,
                             status: status,
                             stats: stats,
-                            onStatusChanged: (open) => persistRestaurantStatus(
-                              ref,
-                              open
+                            onStatusChanged: (open) async {
+                              final status = open
                                   ? RestaurantStatus.open
-                                  : RestaurantStatus.temporaryClosed,
-                            ),
+                                  : RestaurantStatus.closed;
+                              await persistRestaurantStatus(ref, status);
+                              await ref
+                                  .read(menuApiRepositoryProvider)
+                                  .updateMerchant(isOpen: open);
+                              ref.invalidate(merchantProfileProvider);
+                              ref.read(scheduleProvider.notifier).refresh();
+                            },
                             onMenu: () => context.go('/menu'),
                             onSchedule: () => context.go('/schedule'),
                           ),

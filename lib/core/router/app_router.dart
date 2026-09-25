@@ -4,11 +4,13 @@ import 'package:eda_restaurant/features/auth/presentation/screens/login_screen.d
 import 'package:eda_restaurant/features/documents/presentation/screens/documents_screen.dart';
 import 'package:eda_restaurant/features/language/presentation/screens/language_screen.dart';
 import 'package:eda_restaurant/features/menu/presentation/screens/category_manage_screen.dart';
+import 'package:eda_restaurant/features/menu/presentation/screens/ingredients_manage_screen.dart';
 import 'package:eda_restaurant/features/menu/presentation/screens/menu_screen.dart';
 import 'package:eda_restaurant/features/menu/presentation/screens/product_edit_screen.dart';
 import 'package:eda_restaurant/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:eda_restaurant/features/orders/presentation/screens/order_details_screen.dart';
 import 'package:eda_restaurant/features/orders/presentation/screens/orders_screen.dart';
+import 'package:eda_restaurant/features/profile/presentation/screens/profile_edit_screen.dart';
 import 'package:eda_restaurant/features/profile/presentation/screens/profile_screen.dart';
 import 'package:eda_restaurant/features/schedule/presentation/screens/schedule_screen.dart';
 import 'package:eda_restaurant/features/settings/presentation/screens/settings_screen.dart';
@@ -116,6 +118,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             fadeSlidePage(state: state, child: const CategoryManageScreen()),
       ),
       GoRoute(
+        path: '/menu/ingredients',
+        pageBuilder: (context, state) => fadeSlidePage(
+          state: state,
+          child: const IngredientsManageScreen(),
+        ),
+      ),
+      GoRoute(
         path: '/documents',
         pageBuilder: (context, state) =>
             fadeSlidePage(state: state, child: const DocumentsScreen()),
@@ -129,6 +138,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         pageBuilder: (context, state) =>
             fadeSlidePage(state: state, child: const SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        pageBuilder: (context, state) =>
+            fadeSlidePage(state: state, child: const ProfileEditScreen()),
       ),
     ],
   );

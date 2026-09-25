@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:eda_restaurant/core/network/api_client.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -41,6 +44,24 @@ class MessagingService {
       debugPrint('FCM init skipped: $error');
       debugPrintStack(stackTrace: stackTrace);
       return null;
+    }
+  }
+
+  Future<void> registerWithBackend(ApiClient api, {String? token}) async {
+    try {
+      final fcmToken = token ?? await _messaging.getToken();
+      if (fcmToken == null || fcmToken.isEmpty) return;
+      await api.post(
+        '/notifications/device-token',
+        data: {
+          'token': fcmToken,
+          'platform': Platform.isIOS ? 'ios' : 'android',
+          'app': 'restaurant',
+        },
+      );
+      debugPrint('FCM token registered');
+    } catch (e) {
+      debugPrint('FCM token register skipped: $e');
     }
   }
 

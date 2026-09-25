@@ -1,4 +1,6 @@
 import 'package:eda_restaurant/core/constants/app_constants.dart';
+import 'package:eda_restaurant/core/network/api_client.dart';
+import 'package:eda_restaurant/core/services/messaging_service.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,7 +70,7 @@ Future<void> persistThemeMode(WidgetRef ref, ThemeMode mode) async {
 }
 
 Future<void> persistRestaurantStatus(
-  WidgetRef ref,
+  Ref ref,
   RestaurantStatus status,
 ) async {
   ref.read(restaurantStatusProvider.notifier).state = status;
@@ -85,6 +87,10 @@ Future<void> persistAuth(
   await ref.read(prefsProvider).setAuthToken(token);
   await ref.read(prefsProvider).setUserPhone(phone);
   await ref.read(prefsProvider).setRememberMe(rememberMe);
+  // ignore: unawaited_futures
+  ref.read(messagingServiceProvider).registerWithBackend(
+        ref.read(apiClientProvider),
+      );
 }
 
 Future<void> clearAuth(WidgetRef ref) async {

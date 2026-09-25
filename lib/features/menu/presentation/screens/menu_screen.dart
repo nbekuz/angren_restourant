@@ -1,5 +1,6 @@
 import 'package:eda_restaurant/core/theme/app_colors.dart';
 import 'package:eda_restaurant/core/widgets/cards/app_cards.dart';
+import 'package:eda_restaurant/features/menu/data/menu_api_repository.dart';
 import 'package:eda_restaurant/shared/providers/menu_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -14,16 +15,25 @@ class MenuScreen extends ConsumerWidget {
     final menu = ref.watch(menuProvider);
     final selected = ref.watch(selectedCategoryProvider);
     final products = ref.watch(filteredProductsProvider);
+    final merchant = ref.watch(merchantProfileProvider).value;
+    final isRestaurant = merchant?.type == 'restaurant';
+    final locale = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Menu'),
+        title: const Text('Menyu'),
         actions: [
           IconButton(
-            tooltip: 'Manage categories',
+            tooltip: 'Kategoriyalar',
             onPressed: () => context.push('/menu/category'),
             icon: const Icon(Icons.category_rounded),
           ),
+          if (isRestaurant)
+            IconButton(
+              tooltip: 'Ingredientlar',
+              onPressed: () => context.push('/menu/ingredients'),
+              icon: const Icon(Icons.spa_rounded),
+            ),
         ],
       ),
       body: CustomScrollView(
@@ -34,9 +44,40 @@ class MenuScreen extends ConsumerWidget {
                 AppSpacing.page,
                 AppSpacing.sm,
                 AppSpacing.page,
-                AppSpacing.lg,
+                AppSpacing.md,
               ),
               child: _MenuSummary(products: menu.products),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                0,
+                AppSpacing.page,
+                AppSpacing.lg,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push('/menu/category'),
+                      icon: const Icon(Icons.category_rounded),
+                      label: const Text('Kategoriya'),
+                    ),
+                  ),
+                  if (isRestaurant) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/menu/ingredients'),
+                        icon: const Icon(Icons.spa_rounded),
+                        label: const Text('Ingredient'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           SliverToBoxAdapter(
@@ -59,7 +100,9 @@ class MenuScreen extends ConsumerWidget {
                   }
                   final category = menu.categories[index - 1];
                   return ChoiceChip(
-                    label: Text('${category.name} ${category.productCount}'),
+                    label: Text(
+                      '${category.label(locale)} ${category.productCount}',
+                    ),
                     selected: selected == category.id,
                     onSelected: (_) =>
                         ref.read(selectedCategoryProvider.notifier).state =

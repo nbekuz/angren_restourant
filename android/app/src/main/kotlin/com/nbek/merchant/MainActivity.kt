@@ -1,4 +1,4 @@
-package app.eda.eda_restaurant
+package com.nbek.merchant
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:eda_restaurant/core/i18n/localized_fields.dart';
 import 'package:eda_restaurant/core/theme/app_colors.dart';
 import 'package:eda_restaurant/core/toast/toast.dart';
 import 'package:eda_restaurant/core/widgets/buttons/app_buttons.dart';
 import 'package:eda_restaurant/core/widgets/inputs/app_inputs.dart';
+import 'package:eda_restaurant/features/menu/data/menu_api_repository.dart';
 import 'package:eda_restaurant/shared/models/models.dart';
+import 'package:eda_restaurant/shared/providers/app_providers.dart';
 import 'package:eda_restaurant/shared/providers/menu_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,15 +26,21 @@ class ProductEditScreen extends ConsumerStatefulWidget {
 class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
+  final _nameRu = TextEditingController();
+  final _nameEn = TextEditingController();
   final _description = TextEditingController();
+  final _descriptionRu = TextEditingController();
+  final _descriptionEn = TextEditingController();
   final _price = TextEditingController();
   final _image = TextEditingController();
   final _stock = TextEditingController();
   final _weight = TextEditingController();
   final _discount = TextEditingController();
-  final _ingredients = TextEditingController();
   String? _categoryId;
   bool _available = true;
+  String _lang = 'uz';
+  final Set<String> _ingredientIds = {};
+  List<CatalogIngredient> _catalog = const [];
 
   @override
   void initState() {
@@ -42,23 +51,35 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _nameRu.dispose();
+    _nameEn.dispose();
     _description.dispose();
+    _descriptionRu.dispose();
+    _descriptionEn.dispose();
     _price.dispose();
     _image.dispose();
     _stock.dispose();
     _weight.dispose();
     _discount.dispose();
-    _ingredients.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final menu = ref.watch(menuProvider);
+    final locale = ref.watch(localeProvider).languageCode;
     final existing = widget.productId == null || widget.productId == 'new'
         ? null
         : ref.watch(productByIdProvider(widget.productId!));
-    final title = existing == null ? 'New product' : existing.name;
+    final title = existing == null
+        ? 'New product'
+        : localizedField(
+            locale,
+            uz: existing.name,
+            ru: existing.nameRu,
+            en: existing.nameEn,
+            fallback: existing.name,
+          );
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -74,31 +95,144 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
           children: [
             _ImagePreview(imageController: _image),
             const SizedBox(height: AppSpacing.xl),
-            AnimatedTextField(
-              controller: _name,
-              label: 'Name',
-              validator: _required,
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'uz', label: Text("Oʻzbek")),
+                ButtonSegment(value: 'ru', label: Text('Русский')),
+                ButtonSegment(value: 'en', label: Text('English')),
+              ],
+              selected: {_lang},
+              onSelectionChanged: (value) {
+                setState(() => _lang = value.first);
+              },
             ),
             const SizedBox(height: AppSpacing.lg),
-            AnimatedTextField(
-              controller: _description,
-              label: 'Description',
-              maxLines: 3,
-              validator: _required,
-            ),
+            if (_lang == 'uz') ...[
+              AnimatedTextField(
+                controller: _name,
+                label: 'Name (UZ) *',
+                validator: _required,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AnimatedTextField(
+                controller: _description,
+                label: 'Description (UZ)',
+                maxLines: 3,
+              ),
+            ] else if (_lang == 'ru') ...[
+              AnimatedTextField(
+                controller: _nameRu,
+                label: 'Name (RU)',
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AnimatedTextField(
+                controller: _descriptionRu,
+                label: 'Description (RU)',
+                maxLines: 3,
+              ),
+            ] else ...[
+              AnimatedTextField(
+                controller: _nameEn,
+                label: 'Name (EN)',
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AnimatedTextField(
+                controller: _descriptionEn,
+                label: 'Description (EN)',
+                maxLines: 3,
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
-            DropdownButtonFormField<String>(
-              initialValue: _categoryId,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Kategoriya',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/menu/category'),
+                  child: const Text('Boshqarish'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownMenu<String>(
+              key: ValueKey('cat-${_categoryId ?? 'none'}-${menu.categories.length}'),
+              initialSelection: _categoryId,
+              enableFilter: true,
+              requestFocusOnTap: true,
+              expandedInsets: EdgeInsets.zero,
+              label: const Text('Kategoriya tanlang'),
+              hintText: 'Qidirish…',
+              leadingIcon: const Icon(Icons.search_rounded),
+              dropdownMenuEntries: [
                 for (final category in menu.categories)
-                  DropdownMenuItem(
+                  DropdownMenuEntry<String>(
                     value: category.id,
-                    child: Text(category.name),
+                    label: category.label(
+                      Localizations.localeOf(context).languageCode,
+                    ),
                   ),
               ],
-              onChanged: (value) => setState(() => _categoryId = value),
+              onSelected: (value) => setState(() => _categoryId = value),
             ),
+            if (menu.categories.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  'Avval kategoriya qo‘shing (Menyu → Kategoriya).',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ),
+            if (ref.watch(merchantProfileProvider).value?.type ==
+                'restaurant') ...[
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Ingredientlar',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/menu/ingredients'),
+                    child: const Text('Boshqarish'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (_catalog.isEmpty)
+                const Text(
+                  'Ingredient yo‘q. Menyu → Ingredientlar sahifasida qo‘shing.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final item in _catalog)
+                      FilterChip(
+                        label: Text(item.label(locale)),
+                        selected: _ingredientIds.contains(item.id),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _ingredientIds.add(item.id);
+                            } else {
+                              _ingredientIds.remove(item.id);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
@@ -150,12 +284,6 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
               label: 'Image URL',
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            AnimatedTextField(
-              controller: _ingredients,
-              label: 'Ingredients',
-              hint: 'Comma-separated',
-            ),
             const SizedBox(height: AppSpacing.md),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
@@ -170,34 +298,65 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(AppSpacing.page),
-        child: PrimaryButton(
-          label: 'Save product',
-          icon: Icons.save_rounded,
-          onPressed: () => _save(existing),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PrimaryButton(
+              label: 'Mahsulotni saqlash',
+              icon: Icons.save_rounded,
+              onPressed: () => _save(existing),
+            ),
+            if (existing != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SecondaryButton(
+                label: 'O‘chirish',
+                icon: Icons.delete_rounded,
+                onPressed: () => _delete(existing),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  void _hydrate() {
+  Future<void> _hydrate() async {
     final menu = ref.read(menuProvider);
     final existing = widget.productId == null || widget.productId == 'new'
         ? null
         : ref.read(productByIdProvider(widget.productId!));
-    final product = existing;
+    final catalog =
+        await ref.read(menuApiRepositoryProvider).fetchIngredients();
     _categoryId =
-        product?.categoryId ??
+        existing?.categoryId ??
         (menu.categories.isEmpty ? null : menu.categories.first.id);
-    if (product != null) {
-      _name.text = product.name;
-      _description.text = product.description;
-      _price.text = product.price.toStringAsFixed(0);
-      _image.text = product.imageUrl;
-      _stock.text = product.stock.toString();
-      _weight.text = product.weightGrams.toString();
-      _discount.text = product.discountPercent.toString();
-      _ingredients.text = product.ingredients.join(', ');
-      _available = product.available;
+    _catalog = catalog;
+    if (existing != null) {
+      _name.text = existing.name;
+      _nameRu.text = existing.nameRu ?? '';
+      _nameEn.text = existing.nameEn ?? '';
+      _description.text = existing.description;
+      _descriptionRu.text = existing.descriptionRu ?? '';
+      _descriptionEn.text = existing.descriptionEn ?? '';
+      _price.text = existing.price.toStringAsFixed(0);
+      _image.text = existing.imageUrl;
+      _stock.text = existing.stock.toString();
+      _weight.text = existing.weightGrams.toString();
+      _discount.text = existing.discountPercent.toString();
+      _available = existing.available;
+      _ingredientIds
+        ..clear()
+        ..addAll(existing.ingredientIds);
+      if (_ingredientIds.isEmpty && existing.ingredients.isNotEmpty) {
+        for (final name in existing.ingredients) {
+          for (final item in catalog) {
+            if (item.name.toLowerCase() == name.toLowerCase()) {
+              _ingredientIds.add(item.id);
+              break;
+            }
+          }
+        }
+      }
     } else {
       _price.text = '59000';
       _stock.text = '10';
@@ -213,29 +372,71 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     return value == null || value.trim().isEmpty ? 'Required' : null;
   }
 
-  void _save(MenuProduct? existing) {
+  Future<void> _save(MenuProduct? existing) async {
     if (!(_formKey.currentState?.validate() ?? false) || _categoryId == null) {
       return;
     }
+    final selected = _catalog
+        .where((item) => _ingredientIds.contains(item.id))
+        .toList();
     final product = MenuProduct(
       id: existing?.id ?? '',
       categoryId: _categoryId!,
       name: _name.text.trim(),
+      nameRu: _nameRu.text.trim().isEmpty ? null : _nameRu.text.trim(),
+      nameEn: _nameEn.text.trim().isEmpty ? null : _nameEn.text.trim(),
       description: _description.text.trim(),
+      descriptionRu:
+          _descriptionRu.text.trim().isEmpty ? null : _descriptionRu.text.trim(),
+      descriptionEn:
+          _descriptionEn.text.trim().isEmpty ? null : _descriptionEn.text.trim(),
       price: double.tryParse(_price.text.trim()) ?? 0,
       imageUrl: _image.text.trim(),
       weightGrams: int.tryParse(_weight.text.trim()) ?? 0,
       available: _available,
       stock: int.tryParse(_stock.text.trim()) ?? 0,
       discountPercent: int.tryParse(_discount.text.trim()) ?? 0,
-      ingredients: _ingredients.text
-          .split(',')
-          .map((item) => item.trim())
-          .where((item) => item.isNotEmpty)
-          .toList(),
+      ingredientIds: selected.map((e) => e.id).toList(),
+      ingredients: selected.map((e) => e.name).toList(),
+      ingredientsRu: selected.map((e) => e.nameRu ?? e.name).toList(),
+      ingredientsEn: selected.map((e) => e.nameEn ?? e.name).toList(),
     );
-    ref.read(menuProvider.notifier).saveProduct(product);
-    ToastScope.of(context).success('Product saved', subtitle: product.name);
+    final ok = await ref.read(menuProvider.notifier).saveProduct(product);
+    if (!mounted) return;
+    if (!ok) {
+      ToastScope.of(context).error('Saqlash amalga oshmadi');
+      return;
+    }
+    ToastScope.of(context).success('Mahsulot saqlandi', subtitle: product.name);
+    context.pop();
+  }
+
+  Future<void> _delete(MenuProduct product) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mahsulotni o‘chirish'),
+        content: Text('${product.name} o‘chirilsinmi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Bekor'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('O‘chirish'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final ok = await ref.read(menuProvider.notifier).deleteProduct(product.id);
+    if (!mounted) return;
+    if (!ok) {
+      ToastScope.of(context).error('O‘chirish amalga oshmadi');
+      return;
+    }
+    ToastScope.of(context).warning('Mahsulot o‘chirildi');
     context.pop();
   }
 }

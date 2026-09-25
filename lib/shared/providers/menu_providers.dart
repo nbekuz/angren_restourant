@@ -57,13 +57,15 @@ class MenuNotifier extends StateNotifier<MenuState> {
     final categories = await repo.fetchCategories();
     final products = await repo.fetchProducts();
     state = MenuState(categories: categories, products: products);
+    _recountCategories();
   }
 
   Future<void> refresh() => _load();
 
-  Future<void> saveProduct(MenuProduct product) async {
-    final saved = await _ref.read(menuApiRepositoryProvider).saveProduct(product);
-    if (saved == null) return;
+  Future<bool> saveProduct(MenuProduct product) async {
+    final saved =
+        await _ref.read(menuApiRepositoryProvider).saveProduct(product);
+    if (saved == null) return false;
     final id = saved.id.isEmpty ? 'prod_${_uuid.v4()}' : saved.id;
     final normalized = saved.copyWith(id: id);
     final exists = state.products.any((item) => item.id == id);
@@ -75,13 +77,18 @@ class MenuNotifier extends StateNotifier<MenuState> {
         : [normalized, ...state.products];
     state = state.copyWith(products: products);
     _recountCategories();
+    return true;
   }
 
-  void deleteProduct(String productId) {
+  Future<bool> deleteProduct(String productId) async {
+    final ok =
+        await _ref.read(menuApiRepositoryProvider).deleteProduct(productId);
+    if (!ok) return false;
     state = state.copyWith(
       products: state.products.where((item) => item.id != productId).toList(),
     );
     _recountCategories();
+    return true;
   }
 
   void toggleAvailability(String productId, bool available) {
@@ -89,21 +96,27 @@ class MenuNotifier extends StateNotifier<MenuState> {
     saveProduct(product.copyWith(available: available));
   }
 
-  void saveCategory(MenuCategory category) {
-    final id = category.id.isEmpty ? 'cat_${_uuid.v4()}' : category.id;
-    final normalized = category.copyWith(id: id);
+  Future<bool> saveCategory(MenuCategory category) async {
+    final saved =
+        await _ref.read(menuApiRepositoryProvider).saveCategory(category);
+    if (saved == null) return false;
+    final id = saved.id;
     final exists = state.categories.any((item) => item.id == id);
     final categories = exists
         ? [
             for (final item in state.categories)
-              if (item.id == id) normalized else item,
+              if (item.id == id) saved else item,
           ]
-        : [...state.categories, normalized];
+        : [...state.categories, saved];
     state = state.copyWith(categories: _resort(categories));
     _recountCategories();
+    return true;
   }
 
-  void deleteCategory(String categoryId) {
+  Future<bool> deleteCategory(String categoryId) async {
+    final ok =
+        await _ref.read(menuApiRepositoryProvider).deleteCategory(categoryId);
+    if (!ok) return false;
     final fallback = state.categories
         .where((category) => category.id != categoryId)
         .firstOrNull;
@@ -120,6 +133,7 @@ class MenuNotifier extends StateNotifier<MenuState> {
       ],
     );
     _recountCategories();
+    return true;
   }
 
   void reorderCategory(int oldIndex, int newIndex) {

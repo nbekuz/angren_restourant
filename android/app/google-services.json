@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "568229687563",
+    "project_id": "edaapp-b1b94",
+    "storage_bucket": "edaapp-b1b94.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:568229687563:android:22a892db1d2cf4b84ef20e",
+        "android_client_info": {
+          "package_name": "com.nbek.eda"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEFj1fjoO9gtDWjLi8zxPT0u-imiiW6gM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:568229687563:android:023675904d6ee5ce4ef20e",
+        "android_client_info": {
+          "package_name": "com.nbek.edacourier"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEFj1fjoO9gtDWjLi8zxPT0u-imiiW6gM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:568229687563:android:f69a8248da134b1d4ef20e",
+        "android_client_info": {
+          "package_name": "com.nbek.merchant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEFj1fjoO9gtDWjLi8zxPT0u-imiiW6gM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
